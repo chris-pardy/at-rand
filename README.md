@@ -78,6 +78,75 @@ fly secrets set PROVIDER_ATP_IDENTIFIER=... PROVIDER_ATP_PASSWORD=... # etc
 fly deploy
 ```
 
+## Implementing your own entropy provider
+
+The protocol is designed so anyone can run their own entropy provider with any randomness source — drand, hardware RNG, physical dice, coin flips, etc. Your provider just needs to do two things: watch for RFEs and write response records.
+
+### Protocol overview
+
+```
+Client                              Provider
+  │                                    │
+  ├─ writes RFE to own PDS ──────────>│ (firehose or XRPC)
+  │                                    │
+  │                                    ├─ reads RFE from client's PDS
+  │                                    ├─ generates random values
+  │                                    ├─ writes response to own PDS
+  │<────────────────────────────────── │
+  │                                    │
+  └─ reads response from provider's PDS
+```
+
+### Records
+
+**RFE** (`dev.chrispardy.atrand.rfe`) — written by the client:
+
+```json
+{
+  "subject": { "uri": "at://did:plc:user/app.example.game/abc", "cid": "bafy..." },
+  "requests": [
+    { "min": 1, "max": 6 },
+    { "min": 1, "max": 6 }
+  ],
+  "createdAt": "2025-01-01T00:00:00.000Z"
+}
+```
+
+The rkey is `SHA-256(subject_uri + "#" + subject_cid)` in hex. This makes it deterministic — the same subject always maps to the same rkey, preventing re-rolls.
+
+**Response** (`dev.chrispardy.atrand.response`) — written by the provider:
+
+```json
+{
+  "subject": { "uri": "at://did:plc:user/app.example.game/abc", "cid": "bafy..." },
+  "rfe": { "uri": "at://did:plc:user/dev.chrispardy.atrand.rfe/abc123", "cid": "bafy..." },
+  "values": [3, 5],
+  "provenance": { "type": "drand", "round": 12345 },
+  "createdAt": "2025-01-01T00:00:01.000Z"
+}
+```
+
+The response uses the **same rkey** as the RFE. `values` contains one integer per request, each within the specified `[min, max]` range. `provenance` is optional and its structure is up to you — use it to provide proof of how the randomness was generated.
+
+### What your provider needs to do
+
+1. **Watch for RFEs** — subscribe to the AT Protocol firehose filtered for `dev.chrispardy.atrand.rfe` records, or expose an XRPC endpoint (`dev.chrispardy.atrand.getResponse`) that accepts an RFE AT-URI
+2. **Read the RFE** — fetch the record from the client's PDS to get the subject and requests
+3. **Derive the rkey** — `SHA-256(subject_uri + "#" + subject_cid)` as a hex string
+4. **Check for existing response** — look up your own PDS for a response with that rkey. If one exists, return it (anti-re-roll)
+5. **Generate random values** — using whatever randomness source you want, generate one integer per request within `[min, max]` inclusive
+6. **Write the response** — put a `dev.chrispardy.atrand.response` record in your PDS with the derived rkey
+
+### XRPC endpoint (optional)
+
+If you want to support on-demand requests, expose `dev.chrispardy.atrand.getResponse` as an HTTP endpoint:
+
+```
+GET /xrpc/dev.chrispardy.atrand.getResponse?uri=at://did:plc:user/dev.chrispardy.atrand.rfe/abc123
+```
+
+Returns the response record as JSON, generating it first if it doesn't exist.
+
 ## Lexicons
 
 - `dev.chrispardy.atrand.rfe` — Request for entropy record
