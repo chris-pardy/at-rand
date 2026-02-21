@@ -1,0 +1,38 @@
+{
+  "lexicon": 1,
+  "id": "dev.chrispardy.atrand.response",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A response to a request for entropy. The rkey matches the RFE's rkey.",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": ["subject", "rfe", "values", "createdAt"],
+        "properties": {
+          "subject": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "The original record that needed entropy (copied from the RFE)."
+          },
+          "rfe": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "Points back to the RFE that was fulfilled."
+          },
+          "values": {
+            "type": "array",
+            "description": "Generated random values, one per request in the RFE.",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

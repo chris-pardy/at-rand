@@ -1,0 +1,24 @@
+app = "at-rand"
+primary_region = "iad"
+
+[processes]
+provider = "provider"
+dicebot = "dicebot"
+
+[[services]]
+processes = ["provider"]
+internal_port = 3100
+protocol = "tcp"
+
+[[services.ports]]
+handlers = ["http"]
+port = 80
+
+[[services.ports]]
+handlers = ["tls", "http"]
+port = 443
+
+[[vm]]
+memory = "256mb"
+cpu_kind = "shared"
+cpus = 1

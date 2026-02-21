@@ -1,0 +1,48 @@
+{
+  "lexicon": 1,
+  "id": "dev.chrispardy.atrand.rfe",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A request for entropy. The rkey is the SHA-256 hex hash of '${subject_uri}#${subject_cid}'.",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": ["subject", "requests", "createdAt"],
+        "properties": {
+          "subject": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "The record that needs entropy (e.g. a game state or post)."
+          },
+          "requests": {
+            "type": "array",
+            "description": "Array of entropy requests, each specifying a min/max range.",
+            "items": {
+              "type": "ref",
+              "ref": "#rangeRequest"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    },
+    "rangeRequest": {
+      "type": "object",
+      "required": ["min", "max"],
+      "properties": {
+        "min": {
+          "type": "integer",
+          "description": "Minimum value (inclusive)."
+        },
+        "max": {
+          "type": "integer",
+          "description": "Maximum value (inclusive)."
+        }
+      }
+    }
+  }
+}

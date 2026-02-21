@@ -1,0 +1,32 @@
+{
+  "lexicon": 1,
+  "id": "dev.chrispardy.atrand.getResponse",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Get or generate an entropy response for a given RFE.",
+      "parameters": {
+        "type": "params",
+        "required": ["uri"],
+        "properties": {
+          "uri": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "The AT-URI of the RFE record."
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "ref",
+          "ref": "dev.chrispardy.atrand.response#main"
+        }
+      },
+      "errors": [
+        { "name": "RfeNotFound" },
+        { "name": "InvalidRfe" }
+      ]
+    }
+  }
+}
