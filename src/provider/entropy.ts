@@ -22,7 +22,7 @@ export interface ResponseRecord {
   subject: { uri: string; cid: string };
   rfe: { uri: string; cid: string };
   values: number[];
-  drandRound: number;
+  provenance?: unknown;
   createdAt: string;
 }
 
@@ -63,11 +63,11 @@ export async function handleRfe(
     subject: rfe.subject,
     rfe: { uri: rfeUri, cid: rfeCid },
     values,
-    drandRound: round.round,
+    provenance: { type: "drand", round: round.round },
     createdAt: new Date().toISOString(),
   };
 
   await putRecord(agent, RESPONSE_COLLECTION, rkey, record as unknown as Record<string, unknown>);
-  log.info({ rkey, rfeUri, values, drandRound: round.round }, "response created");
+  log.info({ rkey, rfeUri, values, provenance: record.provenance }, "response created");
   return record;
 }

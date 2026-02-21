@@ -8,7 +8,7 @@
       "key": "any",
       "record": {
         "type": "object",
-        "required": ["subject", "rfe", "values", "drandRound", "createdAt"],
+        "required": ["subject", "rfe", "values", "createdAt"],
         "properties": {
           "subject": {
             "type": "ref",
@@ -27,9 +27,9 @@
               "type": "integer"
             }
           },
-          "drandRound": {
-            "type": "integer",
-            "description": "The drand beacon round number used to generate the random values."
+          "provenance": {
+            "type": "unknown",
+            "description": "Optional proof of randomness. Structure is implementation-defined (e.g. a drand beacon round, a video of a physical dice roll, etc.)."
           },
           "createdAt": {
             "type": "string",

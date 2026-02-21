@@ -89,12 +89,12 @@ describe("handleRfe", () => {
     createdAt: new Date().toISOString(),
   };
 
-  test("generates response with drand round when none exists", async () => {
+  test("generates response with drand provenance when none exists", async () => {
     const agent = createMockAgent(null);
     const result = await handleRfe(agent, "at://did:plc:user/dev.chrispardy.atrand.rfe/abc", "bafyrfe", rfe);
     expect(result).not.toBeNull();
     expect(result!.values.length).toBe(2);
-    expect(result!.drandRound).toBe(MOCK_DRAND.round);
+    expect(result!.provenance).toEqual({ type: "drand", round: MOCK_DRAND.round });
     expect(result!.subject).toEqual(rfe.subject);
     expect(result!.rfe.uri).toBe("at://did:plc:user/dev.chrispardy.atrand.rfe/abc");
     expect(agent.com.atproto.repo.putRecord).toHaveBeenCalled();
@@ -108,7 +108,7 @@ describe("handleRfe", () => {
         subject: rfe.subject,
         rfe: { uri: "at://did:plc:user/dev.chrispardy.atrand.rfe/abc", cid: "bafyrfe" },
         values: [3, 5],
-        drandRound: 99999,
+        provenance: { type: "drand", round: 99999 },
         createdAt: new Date().toISOString(),
       },
     };
