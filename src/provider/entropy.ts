@@ -1,7 +1,10 @@
 import type { AtpAgent } from "@atproto/api";
 import { deriveRkey } from "../lib/rkey";
 import { getRecord, putRecord } from "../lib/pds";
+import { fetchLatestRound, deriveValue } from "../lib/drand";
+import { createLogger } from "../lib/logger";
 
+const log = createLogger("provider:entropy");
 const RESPONSE_COLLECTION = "dev.chrispardy.atrand.response";
 
 export interface RangeRequest {
@@ -19,14 +22,18 @@ export interface ResponseRecord {
   subject: { uri: string; cid: string };
   rfe: { uri: string; cid: string };
   values: number[];
+  drandRound: number;
   createdAt: string;
 }
 
-export function generateValues(requests: RangeRequest[]): number[] {
-  return requests.map(({ min, max }) => {
-    const range = max - min + 1;
-    return Math.floor(Math.random() * range) + min;
-  });
+export function generateValues(
+  requests: RangeRequest[],
+  randomness: string,
+  rkey: string
+): number[] {
+  return requests.map(({ min, max }, index) =>
+    deriveValue(randomness, rkey, index, min, max)
+  );
 }
 
 export async function handleRfe(
@@ -45,17 +52,22 @@ export async function handleRfe(
     rkey
   );
   if (existing) {
+    log.info({ rkey, rfeUri }, "response already exists, skipping");
     return existing.value as unknown as ResponseRecord;
   }
 
-  const values = generateValues(rfe.requests);
+  const round = await fetchLatestRound();
+  const values = generateValues(rfe.requests, round.randomness, rkey);
+
   const record: ResponseRecord = {
     subject: rfe.subject,
     rfe: { uri: rfeUri, cid: rfeCid },
     values,
+    drandRound: round.round,
     createdAt: new Date().toISOString(),
   };
 
   await putRecord(agent, RESPONSE_COLLECTION, rkey, record as unknown as Record<string, unknown>);
+  log.info({ rkey, rfeUri, values, drandRound: round.round }, "response created");
   return record;
 }

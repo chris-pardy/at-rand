@@ -3,7 +3,9 @@ import { join } from "path";
 import type { AtpAgent } from "@atproto/api";
 import type { BlobRef } from "@atproto/api";
 import { getRecord, putRecord } from "../lib/pds";
+import { createLogger } from "../lib/logger";
 
+const log = createLogger("dicebot:dice");
 const ASSETS_DIR = join(import.meta.dir, "..", "..", "assets", "dice");
 const BLOB_CACHE_COLLECTION = "dev.chrispardy.atrand.diceBlobs";
 const BLOB_CACHE_RKEY = "self";
@@ -15,7 +17,6 @@ const BLOB_CACHE_RKEY = "self";
 export async function uploadDiceImages(
   agent: AtpAgent
 ): Promise<Map<number, BlobRef>> {
-  // Try loading cached blob refs
   const cached = await getRecord(
     agent,
     agent.session!.did,
@@ -30,12 +31,11 @@ export async function uploadDiceImages(
       for (let face = 1; face <= 6; face++) {
         blobs.set(face, record.blobs[String(face)]);
       }
-      console.log("Loaded cached dice blobs");
+      log.info("loaded cached dice blobs");
       return blobs;
     }
   }
 
-  // Upload fresh
   const blobs = new Map<number, BlobRef>();
   const blobRecord: Record<string, BlobRef> = {};
   for (let face = 1; face <= 6; face++) {
@@ -45,12 +45,12 @@ export async function uploadDiceImages(
     blobRecord[String(face)] = res.data.blob;
   }
 
-  // Cache the blob refs in a record so they persist
   await putRecord(agent, BLOB_CACHE_COLLECTION, BLOB_CACHE_RKEY, {
     blobs: blobRecord,
     createdAt: new Date().toISOString(),
   });
 
+  log.info("uploaded and cached dice blobs");
   return blobs;
 }
 

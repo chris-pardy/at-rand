@@ -1,8 +1,10 @@
 import { createAgent } from "../lib/pds";
 import { getRecord } from "../lib/pds";
+import { createLogger } from "../lib/logger";
 import { handleRfe, type RfeRecord } from "./entropy";
 import { startFirehose } from "./firehose";
 
+const log = createLogger("provider");
 const RFE_COLLECTION = "dev.chrispardy.atrand.rfe";
 
 async function main() {
@@ -13,18 +15,16 @@ async function main() {
   };
 
   if (!config.identifier || !config.password) {
-    console.error("PROVIDER_ATP_IDENTIFIER and PROVIDER_ATP_PASSWORD are required");
+    log.fatal("PROVIDER_ATP_IDENTIFIER and PROVIDER_ATP_PASSWORD are required");
     process.exit(1);
   }
 
   const agent = await createAgent(config);
-  console.log(`Provider logged in as ${agent.session!.did}`);
+  log.info({ did: agent.session!.did }, "logged in");
 
-  // Start firehose watcher
   const firehose = startFirehose(agent);
-  console.log("Firehose watcher started");
+  log.info("firehose watcher started");
 
-  // Start XRPC HTTP server
   const port = parseInt(process.env.PROVIDER_PORT || "3100", 10);
   const server = Bun.serve({
     port,
@@ -42,9 +42,8 @@ async function main() {
     },
   });
 
-  console.log(`XRPC server listening on port ${server.port}`);
+  log.info({ port: server.port }, "xrpc server listening");
 
-  // Graceful shutdown
   process.on("SIGINT", () => {
     firehose.close();
     server.stop();
@@ -61,7 +60,6 @@ async function handleGetResponse(url: URL, agent: import("@atproto/api").AtpAgen
     );
   }
 
-  // Parse AT-URI: at://did/collection/rkey
   const match = rfeUri.match(/^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/);
   if (!match) {
     return new Response(
@@ -79,9 +77,9 @@ async function handleGetResponse(url: URL, agent: import("@atproto/api").AtpAgen
     );
   }
 
-  // Fetch the RFE from the requester's PDS
   const rfeRecord = await getRecord(agent, repo, collection, rkey);
   if (!rfeRecord) {
+    log.warn({ rfeUri }, "rfe not found");
     return new Response(
       JSON.stringify({ error: "RfeNotFound", message: "RFE record not found" }),
       { status: 404, headers: { "Content-Type": "application/json" } }
@@ -89,6 +87,7 @@ async function handleGetResponse(url: URL, agent: import("@atproto/api").AtpAgen
   }
 
   try {
+    log.info({ rfeUri }, "xrpc getResponse request");
     const response = await handleRfe(
       agent,
       rfeRecord.uri,
@@ -100,6 +99,7 @@ async function handleGetResponse(url: URL, agent: import("@atproto/api").AtpAgen
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
+    log.error({ err, rfeUri }, "error handling xrpc request");
     return new Response(
       JSON.stringify({ error: "InternalError", message: String(err) }),
       { status: 500, headers: { "Content-Type": "application/json" } }
@@ -108,6 +108,6 @@ async function handleGetResponse(url: URL, agent: import("@atproto/api").AtpAgen
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  log.fatal({ err }, "fatal error");
   process.exit(1);
 });

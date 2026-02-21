@@ -1,7 +1,9 @@
 import type { AtpAgent } from "@atproto/api";
 import { connectJetstream, type JetstreamEvent } from "../lib/jetstream";
+import { createLogger } from "../lib/logger";
 import { handleRfe, type RfeRecord } from "./entropy";
 
+const log = createLogger("provider:firehose");
 const RFE_COLLECTION = "dev.chrispardy.atrand.rfe";
 
 export function startFirehose(agent: AtpAgent): { close: () => void } {
@@ -18,14 +20,16 @@ export function startFirehose(agent: AtpAgent): { close: () => void } {
       const rfeUri = `at://${event.did}/${RFE_COLLECTION}/${event.commit.rkey}`;
       const rfeCid = event.commit.cid!;
 
+      log.info({ rfeUri, did: event.did, operation: event.commit.operation }, "rfe received");
+
       try {
         await handleRfe(agent, rfeUri, rfeCid, rfe);
       } catch (err) {
-        console.error("Error handling RFE:", err);
+        log.error({ err, rfeUri }, "error handling rfe");
       }
     },
     onError: (err) => {
-      console.error("Firehose error:", err);
+      log.error({ err }, "firehose error");
     },
   });
 }

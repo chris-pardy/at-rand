@@ -1,7 +1,11 @@
 import { describe, expect, test, mock, beforeEach, afterEach } from "bun:test";
 import type { JetstreamEvent } from "../../lib/jetstream";
 
-// Mock WebSocket for jetstream
+const MOCK_DRAND = {
+  round: 12345,
+  randomness: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+};
+
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
   url: string;
@@ -28,15 +32,21 @@ class MockWebSocket {
 
 describe("startFirehose", () => {
   let originalWebSocket: any;
+  let originalFetch: any;
 
   beforeEach(() => {
     MockWebSocket.instances = [];
     originalWebSocket = globalThis.WebSocket;
+    originalFetch = globalThis.fetch;
     (globalThis as any).WebSocket = MockWebSocket;
+    globalThis.fetch = mock(async () =>
+      new Response(JSON.stringify(MOCK_DRAND), { status: 200 })
+    ) as any;
   });
 
   afterEach(() => {
     globalThis.WebSocket = originalWebSocket;
+    globalThis.fetch = originalFetch;
   });
 
   test("subscribes to RFE collection", async () => {

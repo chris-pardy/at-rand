@@ -4,11 +4,12 @@
   "description": "AT Protocol Entropy Exchange - random number generation for AT Protocol apps",
   "scripts": {
     "test": "bun test",
-"provider": "bun run src/provider/index.ts",
+    "provider": "bun run src/provider/index.ts",
     "dicebot": "bun run src/dicebot/index.ts"
   },
   "dependencies": {
-    "@atproto/api": "^0.13.0"
+    "@atproto/api": "^0.13.0",
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

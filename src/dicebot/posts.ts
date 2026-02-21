@@ -1,8 +1,10 @@
 import type { AtpAgent } from "@atproto/api";
 import { connectJetstream, type JetstreamEvent } from "../lib/jetstream";
+import { createLogger } from "../lib/logger";
 import { deriveRkey } from "../lib/rkey";
 import { getRecord, putRecord } from "../lib/pds";
 
+const log = createLogger("dicebot:posts");
 const POST_COLLECTION = "app.bsky.feed.post";
 const RFE_COLLECTION = "dev.chrispardy.atrand.rfe";
 
@@ -31,7 +33,8 @@ export function startPostWatcher(agent: AtpAgent): { close: () => void } {
       const diceMatch = matchDiceRoll(post.text);
       if (!diceMatch) return;
 
-      // Fetch the post to get its CID for the strongRef
+      log.info({ did: event.did, rkey: event.commit.rkey, count: diceMatch.count }, "dice roll detected");
+
       const postRecord = await getRecord(
         agent,
         event.did,
@@ -43,7 +46,6 @@ export function startPostWatcher(agent: AtpAgent): { close: () => void } {
       const subject = { uri: postRecord.uri, cid: postRecord.cid };
       const rkey = deriveRkey(subject.uri, subject.cid);
 
-      // Build RFE requests (d6 for each die)
       const requests = Array.from({ length: diceMatch.count }, () => ({
         min: 1,
         max: 6,
@@ -57,12 +59,13 @@ export function startPostWatcher(agent: AtpAgent): { close: () => void } {
 
       try {
         await putRecord(agent, RFE_COLLECTION, rkey, rfeRecord);
+        log.info({ rkey, subjectUri: subject.uri }, "rfe created");
       } catch (err) {
-        console.error("Error creating RFE:", err);
+        log.error({ err, rkey }, "error creating rfe");
       }
     },
     onError: (err) => {
-      console.error("Post watcher error:", err);
+      log.error({ err }, "post watcher error");
     },
   });
 }

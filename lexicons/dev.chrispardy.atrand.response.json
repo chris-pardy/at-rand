@@ -8,7 +8,7 @@
       "key": "any",
       "record": {
         "type": "object",
-        "required": ["subject", "rfe", "values", "createdAt"],
+        "required": ["subject", "rfe", "values", "drandRound", "createdAt"],
         "properties": {
           "subject": {
             "type": "ref",
@@ -26,6 +26,10 @@
             "items": {
               "type": "integer"
             }
+          },
+          "drandRound": {
+            "type": "integer",
+            "description": "The drand beacon round number used to generate the random values."
           },
           "createdAt": {
             "type": "string",

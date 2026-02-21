@@ -1,6 +1,21 @@
 import { describe, expect, test, mock, beforeEach, afterEach } from "bun:test";
 
+const MOCK_DRAND = {
+  round: 12345,
+  randomness: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+};
+const originalFetch = globalThis.fetch;
+
 describe("XRPC endpoint", () => {
+  beforeEach(() => {
+    globalThis.fetch = mock(async () =>
+      new Response(JSON.stringify(MOCK_DRAND), { status: 200 })
+    ) as any;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
   test("returns 400 for missing uri param", async () => {
     const res = await buildHandler({}).fetch(
       new Request("http://localhost/xrpc/dev.chrispardy.atrand.getResponse")

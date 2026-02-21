@@ -1,7 +1,9 @@
 import type { AtpAgent, BlobRef } from "@atproto/api";
 import { connectJetstream, type JetstreamEvent } from "../lib/jetstream";
+import { createLogger } from "../lib/logger";
 import { formatDiceReply, buildDiceEmbed } from "./dice";
 
+const log = createLogger("dicebot:responses");
 const RESPONSE_COLLECTION = "dev.chrispardy.atrand.response";
 const POST_COLLECTION = "app.bsky.feed.post";
 
@@ -29,8 +31,9 @@ export function startResponseWatcher(
 
       const response = event.commit.record as unknown as ResponseRecord;
 
-      // Check if this response is for one of our RFEs
       if (!response.rfe?.uri?.includes(botDid)) return;
+
+      log.info({ rfeUri: response.rfe.uri, values: response.values }, "response received for our rfe");
 
       const replyText = formatDiceReply(response.values);
       const embed = buildDiceEmbed(response.values, diceBlobs);
@@ -53,12 +56,13 @@ export function startResponseWatcher(
             createdAt: new Date().toISOString(),
           },
         });
+        log.info({ subjectUri, values: response.values }, "dice reply posted");
       } catch (err) {
-        console.error("Error posting dice reply:", err);
+        log.error({ err, subjectUri }, "error posting dice reply");
       }
     },
     onError: (err) => {
-      console.error("Response watcher error:", err);
+      log.error({ err }, "response watcher error");
     },
   });
 }

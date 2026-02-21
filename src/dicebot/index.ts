@@ -1,7 +1,10 @@
 import { createAgent } from "../lib/pds";
+import { createLogger } from "../lib/logger";
 import { uploadDiceImages } from "./dice";
 import { startPostWatcher } from "./posts";
 import { startResponseWatcher } from "./responses";
+
+const log = createLogger("dicebot");
 
 async function main() {
   const config = {
@@ -12,26 +15,26 @@ async function main() {
   const providerDid = process.env.PROVIDER_DID || "";
 
   if (!config.identifier || !config.password) {
-    console.error("DICEBOT_ATP_IDENTIFIER and DICEBOT_ATP_PASSWORD are required");
+    log.fatal("DICEBOT_ATP_IDENTIFIER and DICEBOT_ATP_PASSWORD are required");
     process.exit(1);
   }
   if (!providerDid) {
-    console.error("PROVIDER_DID is required");
+    log.fatal("PROVIDER_DID is required");
     process.exit(1);
   }
 
   const agent = await createAgent(config);
   const botDid = agent.session!.did;
-  console.log(`Dice bot logged in as ${botDid}`);
+  log.info({ did: botDid }, "logged in");
 
   const diceBlobs = await uploadDiceImages(agent);
-  console.log("Dice images uploaded");
+  log.info("dice images ready");
 
   const postWatcher = startPostWatcher(agent);
-  console.log("Post watcher started");
+  log.info("post watcher started");
 
   const responseWatcher = startResponseWatcher(agent, providerDid, botDid, diceBlobs);
-  console.log("Response watcher started");
+  log.info("response watcher started");
 
   process.on("SIGINT", () => {
     postWatcher.close();
@@ -41,6 +44,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  log.fatal({ err }, "fatal error");
   process.exit(1);
 });
